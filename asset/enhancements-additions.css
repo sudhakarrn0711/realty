@@ -1,0 +1,103 @@
+\
+/* enhancements-additions.css - Non-invasive enhancement styles (black glass + neon) */
+:root{
+  --neon-teal: #00ffd2;
+  --neon-cyan: #06b6d4;
+  --neon-violet: #7c3aed;
+  --glass-strong: rgba(20,20,20,0.6);
+  --glass-soft: rgba(20,20,20,0.35);
+}
+
+/* Split view */
+.enh-split {
+  display:flex; gap:12px; align-items:flex-start;
+}
+.enh-split .panel { flex:1; min-width:260px; max-width:60%; }
+
+/* Kanban */
+.enh-kanban { display:flex; gap:12px; align-items:flex-start; }
+.enh-kanban .lane {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:10px; padding:12px; min-width:240px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+  border:1px solid rgba(255,255,255,0.03);
+}
+.enh-kanban .lane h3 { margin:0 0 8px 0; font-size:14px; color:var(--neon-violet); }
+.kanban-card {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  padding:10px; margin-bottom:8px; border-radius:8px; cursor:grab;
+  border-left:4px solid var(--neon-cyan);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.kanban-card:active { cursor:grabbing; transform:scale(.995); box-shadow:0 10px 24px rgba(0,0,0,0.6); }
+.lane.drag-over { outline: 3px dashed rgba(0,255,200,0.12); transform:translateY(-2px); }
+
+/* Neon glow on interactive components */
+.neon-glow { box-shadow: 0 4px 18px rgba(0,255,210,0.06), 0 0 18px rgba(124,58,237,0.06); border-radius:10px; }
+/* Theme transition blur animation */
+.theme-transition-blur { transition: backdrop-filter .45s ease, background .35s ease; }
+.theme-blur-on { backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%); }
+
+/* Chatbot panel */
+.enh-chatbot {
+  position: fixed; right:20px; bottom:20px; width:360px; max-width:92vw;
+  background: var(--glass-strong); border-radius:12px; padding:10px; z-index:9999;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  border:1px solid rgba(255,255,255,0.06);
+}
+.enh-chatbot .messages { max-height:320px; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:8px; }
+.enh-chatbot .msg { padding:8px 10px; border-radius:10px; max-width:85%; }
+.enh-chatbot .msg.user { align-self:flex-end; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-teal)); color:#002; font-weight:600; }
+.enh-chatbot .msg.bot { align-self:flex-start; background:rgba(255,255,255,0.03); color:#eaf6ff; border:1px solid rgba(255,255,255,0.03); }
+
+/* Voice mic button */
+.enh-voice-btn { padding:8px 10px; border-radius:10px; border:none; cursor:pointer; background:linear-gradient(90deg,var(--neon-cyan),var(--neon-violet)); color:#001; box-shadow:0 6px 24px rgba(124,58,237,0.12); }
+
+/* Leaderboard */
+.enh-leaderboard { display:flex; flex-direction:column; gap:8px; }
+.enh-leader { display:flex; justify-content:space-between; padding:8px 10px; border-radius:8px; background:rgba(255,255,255,0.02); }
+
+/* Notifications pulse for expiring tasks */
+.sidebar .pulse-expire { animation: pulse 1.6s infinite; box-shadow: 0 0 12px rgba(255,60,60,0.12); border-radius:6px; }
+@keyframes pulse { 0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)} }
+
+/* Export buttons */
+.enh-export { display:flex; gap:8px; }
+
+/* Agent profile modal skeleton */
+.enh-agent-profile .modal-card { max-width:600px; }
+
+/* Small helper */
+.hidden { display:none !important; }
+
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg,#151515 25%,#222 37%,#151515 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s linear infinite;
+}
+@keyframes skeleton-loading {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Achievement Unlock */
+.achievement-unlock {
+  position: fixed; top:40%; left:50%; transform:translate(-50%,-50%);
+  background: rgba(0,0,0,0.72); padding:18px 28px; border-radius:14px;
+  color:#fff; font-size:18px; text-align:center; z-index:99999;
+  box-shadow: 0 12px 40px rgba(6,182,212,0.12), inset 0 0 18px rgba(124,58,237,0.06);
+  animation: popIn 0.38s cubic-bezier(.2,.9,.3,1), fadeOut 1s ease 3.4s forwards;
+}
+@keyframes popIn { from{ transform:translate(-50%,-50%) scale(.86); opacity:0 } to{ transform:translate(-50%,-50%) scale(1); opacity:1 } }
+@keyframes fadeOut { to { opacity:0; transform:translate(-50%,-50%) scale(.96); } }
+
+/* small neon glow helper (used by applyNeon) */
+.neon-glow { box-shadow: 0 6px 20px rgba(6,182,212,0.06), 0 0 20px rgba(124,58,237,0.03); border-radius:10px; }
+.theme-transition-blur { transition: backdrop-filter .45s ease, background .35s ease; }
+.theme-blur-on { backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%); }
+
+/* Kanban minor */
+.kanban-card { transition: transform .12s cubic-bezier(.2,.9,.3,1), box-shadow .12s ease; }
+.lane.drag-over { outline: 3px dashed rgba(0,255,200,0.12); transform: translateY(-2px); }

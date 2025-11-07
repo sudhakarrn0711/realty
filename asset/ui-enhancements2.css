@@ -1,0 +1,103 @@
+/* asset/dashboard-insights.css */
+
+/* Tooltip styles */
+.ua-tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    z-index: 1000;
+    transform: translateY(-5px);
+}
+
+.ua-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Insight message styles */
+.ua-insight-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1e90ff;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    animation: ua-fadein 0.3s ease forwards, ua-fadeout 0.3s ease forwards 4.7s;
+}
+
+@keyframes ua-fadein {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ua-fadeout {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(20px); }
+}
+
+
+/* --- Enhanced Charts Container --- */
+#crmDash_enhanced-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.5); /* semi-transparent black */
+  backdrop-filter: blur(12px);       /* glassy blur effect */
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* --- Individual chart divs --- */
+#crmDash_enhanced-charts > div {
+  flex: 1 1 400px;
+  min-width: 300px;
+  background: rgba(0, 0, 0, 0.3);   /* slightly darker background per chart */
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease;
+}
+
+#crmDash_enhanced-charts > div:hover {
+  transform: translateY(-4px);
+}
+
+/* --- Chart Toggle Buttons --- */
+#crmDash_chart-toggles {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#crmDash_chart-toggles button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(50, 50, 50, 0.6);
+  color: #fff;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+#crmDash_chart-toggles button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#crmDash_chart-toggles button.active {
+  background: rgba(0, 150, 255, 0.8);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 150, 255, 0.5);
+}

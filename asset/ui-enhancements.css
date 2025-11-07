@@ -1,0 +1,265 @@
+/* asset/dashboard-insights.css */
+
+/* Tooltip styles */
+.ua-tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    z-index: 1000;
+    transform: translateY(-5px);
+}
+
+.ua-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Insight message styles */
+.ua-insight-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1e90ff;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    animation: ua-fadein 0.3s ease forwards, ua-fadeout 0.3s ease forwards 4.7s;
+}
+
+@keyframes ua-fadein {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ua-fadeout {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(20px); }
+}
+
+
+/* --- Enhanced Charts Container --- */
+#crmDash_enhanced-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.5); /* semi-transparent black */
+  backdrop-filter: blur(12px);       /* glassy blur effect */
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* --- Individual chart divs --- */
+#crmDash_enhanced-charts > div {
+  flex: 1 1 400px;
+  min-width: 300px;
+  background: rgba(0, 0, 0, 0.3);   /* slightly darker background per chart */
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease;
+}
+
+#crmDash_enhanced-charts > div:hover {
+  transform: translateY(-4px);
+}
+
+/* --- Chart Toggle Buttons --- */
+#crmDash_chart-toggles {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#crmDash_chart-toggles button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(50, 50, 50, 0.6);
+  color: #fff;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+#crmDash_chart-toggles button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#crmDash_chart-toggles button.active {
+  background: rgba(0, 150, 255, 0.8);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 150, 255, 0.5);
+}
+
+/* Dark Mode Design Polish – Enhancements */
+
+/* Refine card and panel shadows for subtlety */
+.card, .panel {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth transitions for modal overlays */
+.modal-bg {
+    transition: opacity 0.3s ease;
+}
+
+/* Enhance modal card blur and subtle highlights */
+.modal-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, opacity 0.3s ease;
+}
+
+/* Icon clarity adjustments */
+i[data-lucide], svg {
+    filter: brightness(1.2) contrast(1.1);
+    transition: filter 0.2s ease;
+}
+
+.nav button.active i,
+.nav button:hover i,
+.btn:hover i {
+    filter: brightness(1.4) contrast(1.2);
+}
+
+/* Tooltip icons */
+.ua-tooltip {
+    filter: brightness(1.1);
+}
+
+/* Theme-specific adjustments if needed */
+.theme-alt i[data-lucide] {
+    filter: brightness(1.2) contrast(1.1);
+}
+
+.theme-teal i[data-lucide] {
+    filter: brightness(1.3) contrast(1.2);
+}
+
+/* ----------------------
+   Task Streak Card
+----------------------- */
+.task-streak-card {
+  position: relative;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: Arial, sans-serif;
+}
+
+.kpi-icon {
+  font-size: 28px;
+}
+
+.kpi {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.kpisub {
+  font-size: 14px;
+  color: #666;
+}
+
+/* ----------------------
+   Progress Bar
+----------------------- */
+.gamify-progress .progress-wrapper {
+  position: relative;
+  background-color: #e0e0e0;
+  height: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.gamify-progress .progress-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 10px;
+  transition: width 0.5s ease, background-color 0.5s ease;
+}
+
+/* ----------------------
+   Progress Info (Pills + Text)
+----------------------- */
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+/* Pill badges for numbers */
+.progress-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: bold;
+  color: #fff;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Completed pill */
+.completed-pill {
+  background-color: #10b981; /* green */
+}
+
+/* Total pill */
+.total-pill {
+  background-color: #3b82f6; /* blue */
+}
+
+/* Remaining text outside pills */
+.progress-text {
+  font-weight: normal;
+  color: #374151;
+}
+
+/* ----------------------
+   Gamification Milestone Badges
+----------------------- */
+.gamify-badges-container {
+  position: relative; /* inside card */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.gamify-badge {
+  padding: 10px 15px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: bold;
+  display: inline-block;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  animation: floatBadge 3s ease-in-out infinite;
+}
+
+/* Floating animation */
+@keyframes floatBadge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Color-coded milestones */
+.milestone-1 { background: #cd7f32; } /* Bronze */
+.milestone-5 { background: #c0c0c0; } /* Silver */
+.milestone-10 { background: #ffd700; } /* Gold */
+.milestone-25 { background: #9a22f6; } /* Purple */
+.milestone-50 { background: #00bfff; } /* Blue */
