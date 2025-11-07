@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Admin Panel</title>
+<style>
+  body { font-family: Arial; background:#111; color:#fff; display:flex; justify-content:center; padding:20px; }
+  .container { width: 900px; background:rgba(0,0,0,0.85); padding:20px; border-radius:15px; box-shadow:0 0 25px #0ff; display:none; }
+  h2 { text-align:center; color:#0ff; }
+  table { width:100%; border-collapse: collapse; margin-top:20px; }
+  th, td { padding:10px; border:1px solid #0ff; text-align:left; }
+  input, select { width:100%; padding:8px; border-radius:5px; border:none; margin:4px 0; }
+  button { padding:8px 12px; margin:2px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; }
+  button.create { background:#0f0; color:#000; }
+  button.edit { background:#ff0; color:#000; }
+  button.delete { background:#f00; color:#fff; }
+  button:hover { opacity:0.8; }
+  #createEditForm { display:none; margin-top:20px; border-top:1px solid #0ff; padding-top:20px; }
+
+  /* Loader */
+  .loader { border:4px solid #333; border-top:4px solid #0ff; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; margin:auto; display:none; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Toast */
+  #toast { visibility:hidden; min-width:200px; background:#0ff; color:#000; text-align:center; border-radius:8px; padding:10px; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:9999; font-weight:bold; }
+  #toast.show { visibility:visible; animation:fadein 0.5s, fadeout 0.5s 2.5s; }
+  @keyframes fadein { from { bottom:10px; opacity:0; } to { bottom:30px; opacity:1; } }
+  @keyframes fadeout { from { bottom:30px; opacity:1; } to { bottom:10px; opacity:0; } }
+
+  /* Password strength */
+  #passwordStrength { font-size: 0.9em; margin-top:-5px; margin-bottom:8px; }
+  .weak { color:#f33; }
+  .medium { color:#ff0; }
+  .strong { color:#0f0; }
+
+  /* SuperAdmin login screen */
+  #superAdminLogin { display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); padding:30px; border-radius:12px; box-shadow:0 0 20px #0ff; }
+  #superAdminLogin input { padding:10px; border-radius:6px; border:none; margin:8px; width:250px; }
+  #superAdminLogin button { padding:10px; width:270px; border:none; border-radius:6px; cursor:pointer; background:#0ff; color:#000; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="superAdminLogin">
+  <h2>Super Admin Login</h2>
+  <input type="password" id="superAdminPassword" placeholder="Enter SuperAdmin Password" />
+  <button onclick="checkSuperAdmin()">Login</button>
+  <p id="loginError" style="color:red;"></p>
+</div>
+
+<div class="container" id="mainPanel">
+  <h2>Super Admin Panel</h2>
+
+  <div class="loader" id="loader"></div>
+
+  <button class="create" onclick="showCreateForm()">Create New User</button>
+
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Rights</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Create/Edit Form -->
+  <div id="createEditForm">
+    <h3 id="formTitle">Create User</h3>
+    <input type="hidden" id="editUsername" />
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" onkeyup="checkPasswordStrength()" />
+    <div id="passwordStrength"></div>
+    <select id="role">
+      <option value="Admin">Admin</option>
+      <option value="Manager">Manager</option>
+      <option value="Agent">Agent</option>
+    </select>
+    <button onclick="saveUser()">Save</button>
+    <button onclick="cancelForm()">Cancel</button>
+    <p id="formMessage"></p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbz-HJGsSYRzbSPSK3SIeiOKTx7O7hxu4Ap0DQV2oFLLYIqZaSqfoAr1LYIgozPpvDM/exec";
+let editMode = false;
+
+// 🔐 SuperAdmin Password (you can change securely)
+const SUPERADMIN_PASSWORD = "SuperSecret123!";
+
+// Default rights
+function getDefaultRights(role){
+  if(role==="Admin") return ["dashboard","crm-dashboard-v2","leads","buyers","sellers","properties","tasks","reports","map","settings"];
+  if(role==="Manager") return ["leads","buyers","sellers","properties","tasks","reports","map","settings"];
+  if(role==="Agent") return ["leads","buyers","sellers","properties","tasks"];
+  return [];
+}
+
+// Toast
+function showToast(msg, success=true){
+  const toast=document.getElementById("toast");
+  toast.innerText=msg;
+  toast.style.background=success?"#0ff":"#f33";
+  toast.style.color=success?"#000":"#fff";
+  toast.className="show";
+  setTimeout(()=>toast.className=toast.className.replace("show",""),3000);
+}
+
+// Loader
+function showLoader(show){ document.getElementById("loader").style.display = show ? "block":"none"; }
+
+// Password strength
+function checkPasswordStrength(){
+  const pass=document.getElementById("password").value;
+  const el=document.getElementById("passwordStrength");
+  let strength="Weak"; let cls="weak";
+  const strong=/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/;
+  const medium=/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{6,}$/;
+  if(strong.test(pass)){ strength="Strong"; cls="strong"; }
+  else if(medium.test(pass)){ strength="Medium"; cls="medium"; }
+  el.innerText="Password strength: "+strength;
+  el.className=cls;
+}
+
+// SuperAdmin login
+function checkSuperAdmin(){
+  const pwd=document.getElementById("superAdminPassword").value.trim();
+  if(pwd===SUPERADMIN_PASSWORD){
+    document.getElementById("superAdminLogin").style.display="none";
+    document.getElementById("mainPanel").style.display="block";
+    loadUsers();
+  } else {
+    document.getElementById("loginError").innerText="Invalid SuperAdmin password!";
+  }
+}
+
+// Load users
+async function loadUsers(){
+  showLoader(true);
+  try {
+    const res=await fetch(WEBAPP_URL,{method:'POST',body:JSON.stringify({action:'getAllUsers'})});
+    const data=await res.json();
+    renderTable(data.users||[]);
+    showToast("✅ Users loaded");
+  } catch(e){ showToast("❌ Load failed",false); }
+  finally{ showLoader(false); }
+}
+
+// Render table
+function renderTable(users){
+  const tbody=document.querySelector('#usersTable tbody');
+  tbody.innerHTML='';
+  users.forEach(u=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${u.username}</td>
+      <td>${u.role}</td>
+      <td>${u.rights ? u.rights.join(', ') : ''}</td>
+      <td>
+        <button class="edit" onclick="editUser('${u.username}')">Edit</button>
+        <button class="delete" onclick="deleteUser('${u.username}')">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Show form
+function showCreateForm(){
+  editMode=false;
+  document.getElementById("formTitle").innerText="Create User";
+  document.getElementById("username").value="";
+  document.getElementById("password").value="";
+  document.getElementById("passwordStrength").innerText="";
+  document.getElementById("role").value="Agent";
+  document.getElementById("createEditForm").style.display="block";
+}
+
+// Edit user
+async function editUser(username){
+  showLoader(true);
+  try {
+    const res=await fetch(WEBAPP_URL,{method:'POST',body:JSON.stringify({action:'getUser',username})});
+    const data=await res.json();
+    if(data.user){
+      editMode=true;
+      document.getElementById("formTitle").innerText="Edit User";
+      document.getElementById("editUsername").value=username;
+      document.getElementById("username").value=username;
+      document.getElementById("password").value="";
+      document.getElementById("role").value=data.user.role;
+      document.getElementById("createEditForm").style.display="block";
+    }
+  } catch(e){ showToast("❌ Edit failed",false); }
+  finally{ showLoader(false); }
+}
+
+// Save user
+async function saveUser(){
+  const username=document.getElementById("username").value.trim();
+  const password=document.getElementById("password").value.trim();
+  const role=document.getElementById("role").value;
+  if(!username){ showToast("⚠ Username required",false); return; }
+
+  const strong=/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/;
+  if(password && !strong.test(password)){ showToast("⚠ Weak password",false); return; }
+
+  const rights=getDefaultRights(role);
+  let action="addUser"; let payload={username,password,role,rights};
+  if(editMode){ action="updateUser"; payload.oldUsername=document.getElementById("editUsername").value; }
+
+  showLoader(true);
+  try {
+    const res=await fetch(WEBAPP_URL,{method:'POST',body:JSON.stringify({action,...payload})});
+    const data=await res.json();
+    if(data.success){ showToast("✅ "+data.message); cancelForm(); loadUsers(); }
+    else showToast("❌ "+data.message,false);
+  } catch(e){ showToast("❌ Save failed",false); }
+  finally{ showLoader(false); }
+}
+
+// Delete user
+async function deleteUser(username){
+  if(!confirm(`Delete ${username}?`)) return;
+  showLoader(true);
+  try {
+    const res=await fetch(WEBAPP_URL,{method:'POST',body:JSON.stringify({action:'deleteUser',username})});
+    const data=await res.json();
+    showToast(data.message,data.success);
+    loadUsers();
+  } catch(e){ showToast("❌ Delete failed",false); }
+  finally{ showLoader(false); }
+}
+
+// Cancel form
+function cancelForm(){
+  document.getElementById("createEditForm").style.display="none";
+  document.getElementById("formMessage").innerText="";
+}
+</script>
+</body>
+</html>

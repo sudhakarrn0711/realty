@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Real Estate CRM — Leads • Properties • Tasks</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide/dist/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+
+  <link rel="stylesheet" href="asset/realestate.css" />
+  <script defer src="asset/realestate.js"></script>
+
+  <link rel="stylesheet" href="asset/ui-enhancements.css" />
+  <script defer src="asset/ui-enhancements.js"></script>
+</head>
+
+<body>
+
+  <header class="header">
+    <div style="display:flex; align-items:center; gap:12px;">
+
+      <img src="https://images.unsplash.com/photo-1560185127-6af2f66b6d12?q=80&w=400&auto=format&fit=crop" alt="logo"
+        class="logo-img" />
+      <h1 class="logo-title">RanSan Groups</h1>
+    </div>
+
+    <!-- Environment Toggle -->
+    <div class="env-toggle">
+      <label class="switch">
+        <input type="checkbox" id="envSwitch">
+        <span class="slider round"></span>
+      </label>
+      <span id="envLabel">Test</span>
+    </div>
+
+    <!-- Notification Bell -->
+    <div id="notificationWrapper">
+      <div id="notificationBell" onclick="toggleNotificationPanel()">
+        🔔
+        <span id="notificationCount">0</span>
+      </div>
+      <div id="notificationPanel"></div>
+    </div>
+
+
+
+
+
+  </header>
+
+
+  <div id="root" class="app theme-alt">
+    <div id="sidebar" class="sidebar">
+      <!-- Sidebar Header with Toggle -->
+      <div class="sidebar-header">
+        <button id="sidebarToggle" onclick="app.toggleSidebar()">☰</button>
+        <span class="logo-title">RanSan Real Estate</span>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav" id="nav">
+        <button data-view="dashboard" data-key="dashboard" data-tooltip="Dashboard" onclick="app.show('dashboard')">
+          <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+        </button>
+
+        <button data-view="crm-dashboard-v2" data-key="crm-dashboard-v2" data-tooltip="CRM Dashboard"
+          onclick="app.show('crm-dashboard-v2')">
+          <i data-lucide="grid"></i><span>CRM Dashboard</span>
+        </button>
+
+        <button data-view="leads" data-key="leads" data-tooltip="Leads" onclick="app.show('leads')">
+          <i data-lucide="clipboard-list"></i><span>Leads</span>
+          <span id="leads-badge" class="badge">0</span>
+        </button>
+
+        <button data-view="buyers" data-key="buyers" data-tooltip="Buyers" onclick="app.show('buyers')">
+          <i data-lucide="users"></i><span>Buyers</span>
+        </button>
+
+        <button data-view="sellers" data-key="sellers" data-tooltip="Sellers" onclick="app.show('sellers')">
+          <i data-lucide="home"></i><span>Sellers</span>
+        </button>
+
+        <button data-view="properties" data-key="properties" data-tooltip="Properties" onclick="app.show('properties')">
+          <i data-lucide="building-2"></i><span>Properties</span>
+          <span id="properties-badge" class="badge">0</span>
+        </button>
+
+        <button data-view="tasks" data-key="tasks" data-tooltip="Tasks" onclick="app.show('tasks')">
+          <i data-lucide="calendar"></i><span>Tasks</span>
+          <span id="tasks-badge" class="badge">0</span>
+        </button>
+
+        <button data-view="reports" data-key="reports" data-tooltip="Reports" onclick="app.show('reports')">
+          <i data-lucide="bar-chart-3"></i><span>Reports</span>
+        </button>
+
+        <button data-view="map" data-key="map" data-tooltip="Map" onclick="app.show('map')">
+          <i data-lucide="map"></i><span>Map Location</span>
+        </button>
+
+        <!-- 🔑 Logout -->
+        <button data-view="logout" data-key="logout" data-tooltip="Logout" onclick="logoutUser()">
+          <i data-lucide="log-out"></i><span>Logout</span>
+        </button>
+      </div>
+
+
+
+
+
+
+      <!-- Footer -->
+      <div style="margin-top:auto">
+        <div class="muted small">Theme</div>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+          <button class="btn" onclick="app.setTheme('default')">Purple</button>
+          <button class="btn" onclick="app.setTheme('alt')">Cyan</button>
+          <button class="btn" onclick="app.setTheme('teal')">Teal</button>
+        </div>
+        <div class="small muted">v2.0</div>
+      </div>
+    </div>
+
+
+
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div class="search">
+            🔎 <input id="globalSearch" placeholder="Search name/phone/property..." oninput="app.onSearch()" />
+          </div>
+        </div>
+        <div class="toggler">
+          <div class="small muted">Welcome, Admin</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button class="btn" onclick="app.openLeadModal()">+ New Lead</button>
+            <button class="btn" onclick="app.openPropertyModal()">+ New Property</button>
+            <button class="btn" onclick="app.openTaskModal()">+ New Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="page-dashboard" class="page fadeIn">
+
+        <div class="card-grid">
+
+          <div class="card">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi kpi-purple" id="kpi-total" data-insight="true"
+              data-insight-tooltip="Total leads collected across all campaigns.">0</div>
+            <div class="kpisub">Total Leads</div>
+            <canvas id="sparkline-total" height="40"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi kpi-teal" id="kpi-hot" data-insight="true"
+              data-insight-tooltip="Leads marked as Hot. Shows total and how many this week.">0</div>
+            <div class="kpisub" id="kpi-hot-sub">Hot Leads</div>
+            <canvas id="sparkline-hot" height="40"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="kpi-icon">🔔</div>
+            <div class="kpi kpi-orange" id="kpi-follow" data-insight="true"
+              data-insight-tooltip="Leads that require follow-ups today or this week.">0</div>
+            <div class="kpisub">Pending Follow-ups</div>
+            <canvas id="sparkline-follow" height="40"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi kpi-green" id="kpi-closed" data-insight="true"
+              data-insight-tooltip="Deals successfully closed this month.">0</div>
+            <div class="kpisub">Closed Deals</div>
+            <canvas id="sparkline-closed" height="40"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="kpi-icon">🗓️</div>
+            <div class="kpi kpi-blue" id="kpi-tasks-num" data-insight="true"
+              data-insight-tooltip="Tasks scheduled and pending completion.">0</div>
+            <div class="kpisub">Open Tasks</div>
+            <small id="kpi-tasks-breakdown"
+              style="display:block; margin-top:6px; font-size:12px; line-height:1.4"></small>
+            <canvas id="sparkline-tasks" height="40"></canvas>
+          </div>
+
+          <!-- Gamification: Task Streak and Progress -->
+          <div class="card task-streak-card">
+            <div class="kpi-icon">🏆</div>
+            <div class="kpi kpi-gamify" id="kpi-streak" data-insight="true"
+              data-insight-tooltip="Track your task completion streak. Keep going!">0</div>
+            <div class="kpisub">Task Streak</div>
+
+            <div id="gamify-progress" class="gamify-progress">
+              <div class="progress-wrapper">
+                <div class="progress-bar"></div>
+              </div>
+              <div class="progress-pill">
+                <span class="progress-text">0 of 0 tasks completed</span>
+              </div>
+            </div>
+          </div>
+
+
+          <div class="card">
+            <!-- Gamification: Milestone Badges Container -->
+            <div id="gamify-badges-container" class="gamify-badges-container"></div>
+          </div>
+
+
+
+
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1; min-width:260px; max-width:360px;">
+            <div class="card panel">
+              <strong>Leads by Source</strong>
+              <canvas id="chartSource" height="120" data-drilldown="source" data-lazy-chart="true"></canvas>
+            </div>
+            <div class="card panel">
+              <strong>Status Funnel</strong>
+              <div class="progress" title="Funnel completion"><i id="funnelProgress" style="width:0%"></i></div>
+              <canvas id="chartStatus" height="140" style="margin-top:10px" data-drilldown="status"></canvas>
+            </div>
+          </div>
+          <div style="flex:1; min-width:320px;">
+            <div class="card panel">
+              <strong>Upcoming Follow-ups</strong>
+              <div id="followList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🆕 Dashboard Reports Section -->
+        <h2 class="dashboard-title col-span-2 dashboard-grid">📊 Dashboard Reports</h2>
+        <div class="dashboard-grid">
+
+          <div class="card panel">
+            <strong>Lead Conversion Funnel</strong>
+            <canvas id="chartFunnel"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Monthly Trends (Leads & Closures)</strong>
+            <canvas id="chartMonthlyTrends"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Properties Pipeline</strong>
+            <canvas id="chartPipeline"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Leads by Location</strong>
+            <canvas id="chartLeadLocation"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Agent/Team Performance</strong>
+            <canvas id="chartAgents"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Follow-up Status Aging</strong>
+            <canvas id="chartAging"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Revenue Projection</strong>
+            <canvas id="chartRevenue"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Lead Source Effectiveness</strong>
+            <canvas id="chartLeadSourceEffectiveness"></canvas>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Enhanced Interactive CRM Dashboard v2 -->
+      <div id="page-crm-dashboard-v2" class="page fadeIn" style="display:none;">
+        <h2 style="margin-bottom:12px">Interactive CRM Dashboard</h2>
+
+        <div class="crmDash_summary">
+          <div class="crmDash_summary-card" id="crmDash_summary-leads">
+            <h3>Leads</h3>
+            <div class="crmDash_summary-value" id="crmDash_summary-leads-value">0</div>
+            <div class="crmDash_summary-tooltip" id="crmDash_summary-leads-tooltip"></div>
+          </div>
+          <div class="crmDash_summary-card" id="crmDash_summary-properties">
+            <h3>Properties</h3>
+            <div class="crmDash_summary-value" id="crmDash_summary-properties-value">0</div>
+            <div class="crmDash_summary-tooltip" id="crmDash_summary-properties-tooltip"></div>
+          </div>
+          <div class="crmDash_summary-card" id="crmDash_summary-tasks">
+            <h3>Tasks</h3>
+            <div class="crmDash_summary-value" id="crmDash_summary-tasks-value">0</div>
+            <div class="crmDash_summary-tooltip" id="crmDash_summary-tasks-tooltip"></div>
+          </div>
+          <div class="crmDash_summary-card" id="crmDash_summary-buyers">
+            <h3>Buyers</h3>
+            <div class="crmDash_summary-value" id="crmDash_summary-buyers-value">0</div>
+            <div class="crmDash_summary-tooltip" id="crmDash_summary-buyers-tooltip"></div>
+          </div>
+          <div class="crmDash_summary-card" id="crmDash_summary-sellers">
+            <h3>Sellers</h3>
+            <div class="crmDash_summary-value" id="crmDash_summary-sellers-value">0</div>
+            <div class="crmDash_summary-tooltip" id="crmDash_summary-sellers-tooltip"></div>
+          </div>
+        </div>
+
+        <div class="crmDash_dashboard">
+          <!-- Leads Card -->
+          <div class="crmDash_card" id="crmDash_leads-card">
+            <h2>Leads</h2>
+            <div id="crmDash_leads-badge" class="crmDash_badge">Loading...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="crmDash_leads-table-body"></tbody>
+            </table>
+            <canvas id="crmDash_leads-chart" height="100"></canvas>
+          </div>
+
+          <!-- Properties Card -->
+          <div class="crmDash_card" id="crmDash_properties-card">
+            <h2>Properties</h2>
+            <div id="crmDash_properties-badge" class="crmDash_badge">Loading...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Mode</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="crmDash_properties-table-body"></tbody>
+            </table>
+            <canvas id="crmDash_properties-chart" height="100"></canvas>
+          </div>
+
+          <!-- Tasks Card -->
+          <div class="crmDash_card" id="crmDash_tasks-card">
+            <h2>Tasks</h2>
+            <div id="crmDash_tasks-badge" class="crmDash_badge">Loading...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="crmDash_tasks-table-body"></tbody>
+            </table>
+            <canvas id="crmDash_tasks-chart" height="100"></canvas>
+          </div>
+
+          <!-- Timeline Card -->
+          <div class="crmDash_card" id="crmDash_timeline-card">
+            <h2>Activity Timeline <span class="crmDash_badge"
+                style="float:right;background:#1e90ff;padding:4px 10px;border-radius:12px;"
+                id="crmDash_timeline-count">0
+                Activities</span></h2>
+            <div class="crmDash_timeline" id="crmDash_timeline"></div>
+          </div>
+
+          <!-- Buyers Card -->
+          <div class="crmDash_card" id="crmDash_buyers-card">
+            <h2>Buyers</h2>
+            <div id="crmDash_buyers-badge" class="crmDash_badge">Loading...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody id="crmDash_buyers-table-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Sellers Card -->
+          <div class="crmDash_card" id="crmDash_sellers-card">
+            <h2>Sellers</h2>
+            <div id="crmDash_sellers-badge" class="crmDash_badge">Loading...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody id="crmDash_sellers-table-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Revenue Card -->
+          <div class="crmDash_card" id="crmDash_revenue-card">
+            <h2>
+              Revenue
+              <span id="crmDash_revenue-total" class="crmDash_badge crmDash_custom-tooltip"
+                style="background:#1e90ff;margin-left:10px;cursor:pointer;position:relative;">
+                ₹0
+                <div id="crmDash_revenue-breakdown" class="crmDash_tooltip-text"></div>
+              </span>
+              <label style="float:right;font-size:0.9rem;">
+                <input type="checkbox" id="crmDash_revenue-toggle" /> Actual
+              </label>
+            </h2>
+            <canvas id="crmDash_revenue-chart" height="150"></canvas>
+          </div>
+
+        </div>
+
+        <!-- 🆕 Enhanced Charts Section (Isolated) -->
+        <h2 style="margin-top:30px; margin-bottom:12px">📊 Enhanced Charts & Forecasts</h2>
+        <div id="crmDash_enhanced-charts" style="display:flex; flex-wrap:wrap; gap:16px;">
+          <!-- New charts injected by separate JS -->
+
+        </div>
+
+        <!-- Chart toggle controls -->
+        <div id="crmDash_chart-toggles" style="margin-top:10px; display:flex; gap:10px;"></div>
+
+      </div>
+
+
+
+
+      <!-- === Buyers Page === -->
+      <div id="page-buyers" class="page" style="display:none;">
+        <div class="panel">
+          <button class="btn" onclick="app.openBuyerModal()">+ Buyer</button>
+          <button class="btn" onclick="app.openBulkUploadBuyers()">⇪ Bulk Upload</button>
+        </div>
+
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="buyersTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- === Sellers Page === -->
+      <div id="page-sellers" class="page" style="display:none;">
+        <div class="panel">
+          <button class="btn" onclick="app.openSellerModal()">+ Seller</button>
+          <button class="btn" onclick="app.openBulkUploadSellers()">⇪ Bulk Upload</button>
+        </div>
+
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="sellersTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+
+      <!-- Leads -->
+      <div id="page-leads" class="page" style="display:none;">
+        <div class="panel">
+          <div class="flex" style="flex-wrap:wrap">
+            <div style="flex:1; min-width:160px">
+              <label>Status</label>
+              <select id="f-status" onchange="app.renderLeads()">
+                <option value="">All</option>
+                <option>New</option>
+                <option>Contacted</option>
+                <option>Site Visit</option>
+                <option>Negotiation</option>
+                <option>Closed</option>
+                <option>Lost</option>
+              </select>
+            </div>
+            <div style="flex:1; min-width:160px">
+              <label>Source</label>
+              <select id="f-source" onchange="app.renderLeads()">
+                <option value="">All</option>
+                <option>Facebook</option>
+                <option>Website</option>
+                <option>Referral</option>
+                <option>WhatsApp</option>
+              </select>
+            </div>
+            <div style="flex:1; min-width:160px">
+              <label>Budget ≥</label>
+              <input type="number" id="f-budget-min" placeholder="Min" oninput="app.renderLeads()" />
+            </div>
+            <div style="flex:1; min-width:160px">
+              <label>Location</label>
+              <input id="f-location" placeholder="e.g., Andheri" oninput="app.renderLeads()" />
+            </div>
+            <div style="align-self:flex-end">
+              <button class="btn" onclick="app.openLeadModal()">+ Lead</button>
+              <button class="btn" onclick="app.openBulkUpload()">⇪ Bulk Upload</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="panel table-container">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th data-key="Name">Name</th>
+                <th data-key="Phone">Phone</th>
+                <th data-key="Email">Email</th>
+                <th data-key="City">City</th>
+                <th data-key="Location">Location</th>
+                <th data-key="Purpose">Purpose</th>
+                <th data-key="PropertyType">Type</th>
+                <th data-key="Budget">Budget</th>
+                <th data-key="Priority">Priority</th>
+                <th data-key="Agent">Agent</th>
+                <th data-key="Source">Source</th>
+                <th data-key="Status">Status</th>
+                <th data-key="PropertyID">Property</th>
+                <th data-key="NextFollowupDate">Next Follow-up</th>
+                <th data-key="LeadDate">Lead Date</th>
+                <th data-key="FinancingType">Financing</th>
+                <th data-key="BuyingWindow">Buying Window</th>
+                <th data-key="Occupation">Occupation</th>
+                <th data-key="LeadScore">Score</th>
+                <th data-key="Remark">Remark</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="leadsTable" data-lazy-table="true"></tbody>
+          </table>
+        </div>
+
+
+
+      </div>
+
+      <!-- Properties -->
+      <div id="page-properties" class="page" style="display:none;">
+
+        <div class="panel">
+          <button class="btn" onclick="app.openPropertyModal()">+ Property</button>
+          <button class="btn" onclick="app.openBulkUploadProperties()">⇪ Bulk Upload</button>
+          <button class="btn btn-clear" onclick="app.clearPropertyFilters()">Clear Filters</button>
+          <div id="propertyActiveFilters" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="Title">Title</th>
+                <th data-key="FullAddress">Full Address</th>
+                <th data-key="Location">Location</th>
+                <th data-key="City">City</th>
+                <th data-key="Type">Type</th>
+                <th data-key="Mode">Mode</th>
+                <th data-key="Size">Size</th>
+                <th data-key="Price">Price</th>
+                <th data-key="Bedrooms">Bedrooms</th>
+                <th data-key="Bathrooms">Bathrooms</th>
+                <th data-key="Furnishing">Furnishing</th>
+                <th data-key="Amenities">Amenities</th>
+                <th data-key="Facing">Facing</th>
+                <th data-key="ConstructionStatus">Construction Status</th>
+                <th data-key="Age">Age</th>
+                <th data-key="Availability">Availability</th>
+                <th data-key="AssignedTo">Assigned To</th>
+                <th data-key="Owner">Owner</th>
+                <th data-key="Seller">Seller</th>
+                <th data-key="ListedDate">Listed Date</th>
+                <th data-key="MediaURLs">Media URLs</th>
+                <th data-key="Remark">Remark</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody id="propertiesTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+
+      <!-- Tasks -->
+      <div id="page-tasks" class="page" style="display:none;">
+        <div class="panel">
+          <div class="flex" style="flex-wrap:wrap">
+            <div style="flex:1; min-width:160px">
+              <label>Status</label>
+              <select id="t-status" onchange="app.renderTasks()">
+                <option value="">All</option>
+                <option value="Open">Open</option>
+                <option value="Done">Done</option>
+                <option value="Rescheduled">Rescheduled</option>
+              </select>
+            </div>
+
+            <div style="flex:1; min-width:160px">
+              <label>Type</label>
+              <select id="t-type" onchange="app.renderTasks()">
+                <option value="">All</option>
+                <option value="Call">Call</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Site Visit">Site Visit</option>
+                <option value="Note">Note</option>
+              </select>
+            </div>
+
+            <div style="align-self:flex-end">
+              <button class="btn" onclick="app.openTaskModal()">+ Task</button>
+              <button class="btn" onclick="app.openBulkUploadTasks()">⇪ Bulk Upload</button>
+              <div id="taskActiveFilters" style="margin-top:8px;"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="DueDate">Due</th>
+                <th data-key="Type">Type</th>
+                <th data-key="Priority">Priority</th>
+                <th data-key="LeadID">Lead</th>
+                <th data-key="PropertyID">Property</th>
+                <th data-key="AssignedTo">Assigned To</th>
+                <th data-key="CreatedBy">Created By</th>
+                <th data-key="ReminderTime">Reminder</th>
+                <th data-key="Category">Category</th>
+                <th data-key="Notes">Notes</th>
+                <th data-key="Outcome">Outcome</th>
+                <th data-key="NextAction">Next Action</th>
+                <th data-key="Attachments">Attachments</th>
+                <th data-key="Status">Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tasksTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+
+
+      <!-- Reports -->
+
+      <div id="page-reports" class="page" style="display:none;">
+        <h3>📊 Reports</h3>
+
+        <!-- Double-column grid for reports -->
+        <div class="reports-grid">
+
+          <div class="card panel">
+            <strong>Leads (Last 7 Days)</strong>
+            <div id="chartLeads7" style="width:100%; height:300px;"></div>
+          </div>
+
+          <div class="card panel">
+            <strong>Lead Source Performance</strong>
+            <div style="width: 100%; max-height: 350px; height: 300px;">
+              <canvas id="chartLeadSourcePerf"></canvas>
+            </div>
+          </div>
+
+          <div class="card panel">
+            <strong>Revenue by Property Type</strong>
+            <canvas id="chartRevenueType" height="140"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Upcoming Tasks Heatmap</strong>
+            <canvas id="chartTaskHeatmap" height="140"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Top Performing Agents / Sellers</strong>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Seller</th>
+                  <th>Deals</th>
+                  <th>Total Value</th>
+                  <th>Avg Deal</th>
+                </tr>
+              </thead>
+              <tbody id="tableTopSellers"></tbody>
+            </table>
+          </div>
+
+          <div class="card panel">
+            <strong>Buyer Interest Trends</strong>
+            <canvas id="chartBuyerTrends" height="140"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Average Deal Closure Time</strong>
+            <div id="kpiAvgClosure" class="kpi-card"></div>
+          </div>
+
+          <div class="card panel">
+            <strong>Inventory Status</strong>
+            <canvas id="chartInventoryStatus" height="140"></canvas>
+          </div>
+
+          <div class="card panel">
+            <strong>Revenue Forecast</strong>
+            <canvas id="chartRevenueForecast" height="140"></canvas>
+          </div>
+        </div>
+
+
+
+      </div>
+
+      <!-- 🆕 Map Location -->
+      <div id="page-map" class="page" style="display:none;">
+        <h2 class="dashboard-title col-span-2 dashboard-grid">📍 Map Location</h2>
+        <div class="dashboard-grid">
+
+
+          <div class="card panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong>Geo Heatmap</strong>
+              <button class="btn" id="mapFullscreenToggle" style="font-size:14px; padding:4px 8px;">
+                ⛶ Fullscreen Map
+              </button>
+            </div>
+
+            <div id="mapGeoHeat" style="height:420px; width:100%; border-radius:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Modals ===== -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-bg" onclick="app.closeModal()"></div>
+    <div class="modal-card">
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+
+  <!-- ===== Matches Modal ===== -->
+  <div id="matchesModal" class="modal hidden">
+    <div class="modal-bg" onclick="app.closeMatches()"></div>
+    <div class="modal-card">
+      <h3>Recommended Matches</h3>
+      <div id="matchesContent"></div>
+      <div style="text-align:right;margin-top:10px">
+        <button class="btn" onclick="app.closeMatches()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Floating Context Menu -->
+  <div id="taskContextMenu" class="context-menu">
+    <button data-action="toggle"><i data-lucide="check-square"></i> Toggle</button>
+    <button data-action="edit"><i data-lucide="edit-3"></i> Edit</button>
+    <button data-action="delete"><i data-lucide="trash-2"></i> Delete</button>
+  </div>
+
+
+  <!-- Leads Context Menu -->
+  <div id="leadContextMenu" class="context-menu">
+    <button data-action="edit"><i data-lucide="edit-3"></i> Edit</button>
+    <button data-action="followup"><i data-lucide="clock"></i> Follow-up</button>
+    <button data-action="matches"><i data-lucide="search"></i> Matches</button>
+    <button data-action="delete"><i data-lucide="trash-2"></i> Delete</button>
+    <button data-action="whatsapp"><i data-lucide="message-circle"></i> WhatsApp</button>
+  </div>
+
+  <!-- Properties Context Menu -->
+  <div id="propertyContextMenu" class="context-menu">
+    <button data-action="edit"><i data-lucide="edit-3"></i> Edit</button>
+    <button data-action="delete"><i data-lucide="trash-2"></i> Delete</button>
+    <button data-action="whatsapp"><i data-lucide="message-circle"></i> WhatsApp</button>
+  </div>
+
+
+
+
+  <div id="loader" class="loader hidden"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
+
+
+
+  <!-- Leaflet core -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Heatmap plugin -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Leaflet MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+
+
+  <!-- User Authentication start -->
+
+  <!-- <script>
+// 🔑 Sidebar role enforcement
+(function() {
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+  const role = user.role || "";
+
+  console.log("🔐 Logged in as:", role);
+
+  // Get all role-based UI elements
+  const allViews = document.querySelectorAll("[data-view]");
+
+  // Hide all by default
+  allViews.forEach(el => {
+    el.style.display = "none";
+  });
+
+  // Show depending on role
+  if (role === "Agent") {
+    // Agent sees only Leads, Buyers, Sellers, Properties, Tasks + Logout
+    document.querySelectorAll('[data-view="leads"], [data-view="buyers"], [data-view="sellers"], [data-view="properties"], [data-view="tasks"], [data-view="logout"]').forEach(el => {
+      el.style.display = "block";
+    });
+  }
+  else if (role === "Manager") {
+    // Manager sees everything EXCEPT Dashboard + CRM Dashboard
+    allViews.forEach(el => {
+      const view = el.getAttribute("data-view");
+      if (!["dashboard", "crm-dashboard-v2"].includes(view)) {
+        el.style.display = "block";
+      }
+    });
+  }
+  else if (role === "Admin") {
+    // Admin = full access
+    allViews.forEach(el => {
+      el.style.display = "block";
+    });
+  }
+  else {
+    // Unknown role → lock everything
+    console.warn("⚠️ Unknown role, hiding all.");
+  }
+})();
+</script>
+
+<script>
+// 🔐 Auto-redirect protection
+(function () {
+  const user = sessionStorage.getItem("user");
+  if (!user) {
+    window.location.href = "AdminPanel.html";
+  } else {
+    try {
+      const parsed = JSON.parse(user);
+      console.log("🔐 Logged in as:", parsed.role);
+    } catch (e) {
+      sessionStorage.clear();
+      window.location.href = "AdminPanel.html";
+    }
+  }
+})();
+
+// 🔐 Logout Function
+function logoutUser() {
+  sessionStorage.removeItem("user");
+  sessionStorage.clear();
+  window.location.href = "AdminPanel.html";
+}
+
+// 🕒 Session timeout (default: 15 minutes)
+const SESSION_TIMEOUT_MINUTES = 15;
+let sessionTimer;
+
+// Reset session timer on activity
+function resetSessionTimer() {
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    alert("⏰ Session expired due to inactivity. You will be logged out.");
+    logoutUser();
+  }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+}
+
+// Listen to user activity (mouse, keyboard, clicks)
+["click", "mousemove", "keypress", "scroll"].forEach(evt => {
+  document.addEventListener(evt, resetSessionTimer, false);
+});
+
+// Start timer when page loads
+resetSessionTimer();
+</script> -->
+
+
+  <!-- User Authentication end -->
+
+
+
+</body>
+
+</html>

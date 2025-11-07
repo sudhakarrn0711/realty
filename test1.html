@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Personalized Dashboard with Streak Popups</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
+  .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:relative; }
+  .kpi-icon { font-size:28px; }
+  .kpi { font-size:24px; font-weight:bold; cursor:default; }
+  .kpisub { font-size:14px; color:#666; }
+  .gamify-progress .progress-wrapper { position:relative; height:16px; border-radius:12px; overflow:hidden; background:#e0e0e0; margin-top:10px; }
+  .gamify-progress .progress-bar { height:100%; width:0; border-radius:12px; transition: width 1s ease, background 1s ease; }
+  .progress-info { display:flex; align-items:center; gap:5px; margin-top:6px; font-size:14px; flex-wrap:wrap; }
+  .progress-pill { padding:2px 8px; border-radius:12px; font-weight:bold; color:#fff; white-space:nowrap; }
+  .completed-pill { background:#10b981; }
+  .total-pill { background:#3b82f6; }
+  .progress-text { color:#333; }
+
+  .gamify-badges-container { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .gamify-badge { padding:8px 14px; border-radius:12px; color:#fff; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:default; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .gamify-badge:hover { transform: scale(1.1); box-shadow:0 6px 18px rgba(0,0,0,0.35); }
+  .milestone-1 { background:#cd7f32; } 
+  .milestone-5 { background:#c0c0c0; } 
+  .milestone-10 { background:#ffd700; } 
+  .milestone-25 { background:#9a22f6; } 
+  .milestone-50 { background:#00bfff; } 
+
+  /* Streak popup toast */
+  .streak-popup {
+    position: fixed;
+    bottom: 40px;
+    right: 30px;
+    background: linear-gradient(90deg,#3b82f6,#6366f1);
+    color:#fff;
+    padding:12px 20px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+    font-weight:bold;
+    animation: popupFade 0.5s ease forwards;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  @keyframes popupFade {
+    0% { opacity:0; transform:translateY(20px); }
+    10% { opacity:1; transform:translateY(0); }
+    90% { opacity:1; transform:translateY(0); }
+    100% { opacity:0; transform:translateY(-20px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="card" title="Total Leads so far">
+  <div class="kpi-icon">📈</div>
+  <div class="kpi" id="leads-kpi">0</div>
+  <div class="kpisub">Leads</div>
+  <canvas id="leads-chart" height="100"></canvas>
+</div>
+
+<div class="card" title="Total Properties tracked">
+  <div class="kpi-icon">🏡</div>
+  <div class="kpi" id="properties-kpi">0</div>
+  <div class="kpisub">Properties</div>
+  <canvas id="properties-chart" height="100"></canvas>
+</div>
+
+<div class="card task-streak-card" title="Track your task completion streak">
+  <div class="kpi-icon">🏆</div>
+  <div class="kpi" id="kpi-streak">0</div>
+  <div class="kpisub">Task Streak</div>
+
+  <div id="gamify-progress" class="gamify-progress">
+    <div class="progress-wrapper">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-info">
+      <span class="progress-pill completed-pill" id="completed-pill">0</span>
+      <span class="progress-text">of</span>
+      <span class="progress-pill total-pill" id="total-pill">0</span>
+      <span class="progress-text">tasks completed</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="gamify-badges-container" id="gamify-badges-container"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let data = {
+    leads: Array(23).fill(0),
+    properties: Array(13).fill(0),
+    tasks: Array.from({length:16}, (_,i)=>({ID:i+1, Status:i<5?'done':'open'}))
+  };
+
+  const leadsKPI = document.getElementById("leads-kpi");
+  const propertiesKPI = document.getElementById("properties-kpi");
+  const streakEl = document.getElementById("kpi-streak");
+  const completedPill = document.getElementById("completed-pill");
+  const totalPill = document.getElementById("total-pill");
+  const progressBar = document.getElementById("progress-bar");
+  const gamifyContainer = document.getElementById("gamify-badges-container");
+
+  let reachedMilestones = new Set();
+
+  function showStreakPopup(message) {
+    const popup = document.createElement("div");
+    popup.className = "streak-popup";
+    popup.textContent = message;
+    document.body.appendChild(popup);
+
+    // Animate and remove after 3s
+    setTimeout(()=>{ popup.remove(); }, 3000);
+  }
+
+  function renderDashboard() {
+    // KPIs
+    leadsKPI.textContent = data.leads.length;
+    propertiesKPI.textContent = data.properties.length;
+
+    // Task Streak & Progress
+    const completed = data.tasks.filter(t=>t.Status==='done').length;
+    const total = data.tasks.length;
+    streakEl.textContent = completed;
+    completedPill.textContent = completed;
+    totalPill.textContent = total;
+
+    const percentage = total ? (completed/total)*100 : 0;
+    progressBar.style.width = percentage+"%";
+    if(percentage===0) progressBar.style.background="#cccccc";
+    else if(percentage<50) progressBar.style.background="linear-gradient(90deg,#f97316,#f59e0b)";
+    else if(percentage<100) progressBar.style.background="linear-gradient(90deg,#3b82f6,#6366f1)";
+    else progressBar.style.background="linear-gradient(90deg,#10b981,#22c55e)";
+
+    // Milestone Badges
+    const badgeMilestones = [1,5,10,25,50];
+    gamifyContainer.innerHTML='';
+    badgeMilestones.forEach(ms=>{
+      if(completed>=ms){
+        const badge=document.createElement("div");
+        badge.className="gamify-badge milestone-"+ms;
+        badge.textContent=`🏅 ${ms} tasks completed!`;
+        gamifyContainer.appendChild(badge);
+
+        // Show popup if milestone newly reached
+        if(!reachedMilestones.has(ms)){
+          reachedMilestones.add(ms);
+          showStreakPopup(`🎉 Congrats! ${ms} tasks completed!`);
+        }
+      }
+    });
+  }
+
+  renderDashboard();
+
+  // Charts
+  const leadsChart = new Chart(document.getElementById("leads-chart"), {
+    type:"bar",
+    data:{ labels:["Jan","Feb","Mar","Apr","May","Jun","Jul"], datasets:[{label:"Leads",data:[3,5,8,6,10,7,12],backgroundColor:"#3b82f6"}]},
+    options:{responsive:true, plugins:{legend:{display:false}}}
+  });
+
+  const propertiesChart = new Chart(document.getElementById("properties-chart"), {
+    type:"line",
+    data:{ labels:["Jan","Feb","Mar","Apr","May","Jun","Jul"], datasets:[{label:"Properties",data:[2,4,3,5,6,5,7],borderColor:"#10b981",backgroundColor:"rgba(16,185,129,0.2)",fill:true}]},
+    options:{responsive:true, plugins:{legend:{display:false}}}
+  });
+
+  // Simulate live updates
+  setInterval(()=>{
+    const openTasks = data.tasks.filter(t=>t.Status!=='done');
+    if(openTasks.length>0) openTasks[Math.floor(Math.random()*openTasks.length)].Status='done';
+    data.leads.push(0);
+    data.properties.push(0);
+    renderDashboard();
+  },4000);
+</script>
+</body>
+</html>

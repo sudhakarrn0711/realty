@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Super Admin Panel</title>
+<style>
+  :root{--accent:#0ff;--bg:#0b0b0b;--card:rgba(0,0,0,0.85);}
+  html,body{height:100%}
+  body{font-family:Arial,Helvetica,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;padding:20px;margin:0}
+  .container{width:920px;background:var(--card);padding:20px;border-radius:14px;box-shadow:0 0 25px var(--accent)}
+  h2{text-align:center;color:var(--accent);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:10px;border:1px solid rgba(255,255,255,0.06);text-align:left;vertical-align:middle}
+  input,select,button,textarea{box-sizing:border-box}
+  input,select,textarea{width:100%;padding:8px;border-radius:6px;border:none;background:#0f0f0f;color:#fff;margin:6px 0}
+  button{padding:8px 12px;border-radius:7px;border:none;cursor:pointer;font-weight:700}
+  .btn-create{background:#0f0;color:#000}
+  .btn-edit{background:#ff0;color:#000}
+  .btn-del{background:#f33;color:#fff}
+  .small{font-size:0.9rem}
+  #createEditForm{display:none;margin-top:12px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px}
+  #loginScreen{text-align:center}
+  .password-wrapper{position:relative;max-width:360px;margin:10px auto}
+  .password-wrapper input{padding-right:40px}
+  .toggle-password{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--accent)}
+  .loader{display:none;color:var(--accent);text-align:center;margin:8px 0}
+  .toast{position:fixed;right:18px;bottom:18px;background:var(--accent);color:#000;padding:8px 12px;border-radius:8px;display:none}
+  .pw-strength{font-size:0.9rem;margin-top:4px}
+  .muted{color:#bbb;font-size:0.9rem}
+  .actions cell-button{display:inline-block;margin-right:6px}
+  .dash-empty{color:#888; font-style:italic}
+  .btn-inline{display:inline-block;margin-right:6px}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:960px){ .container{width:100%} }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Login -->
+  <div id="loginScreen" aria-hidden="false">
+    <h2>Super Admin Login</h2>
+    <div class="password-wrapper">
+      <input id="superAdminPassword" type="password" placeholder="Enter SuperAdmin Password" aria-label="Super Admin Password" />
+      <span class="toggle-password" title="Show / Hide" id="loginToggle">👁</span>
+    </div>
+    <div style="max-width:360px;margin:0 auto">
+      <button id="loginBtn" class="btn-create">Login</button>
+    </div>
+    <p id="loginMessage" class="muted" aria-live="polite"></p>
+    <div id="loginLoader" class="loader" aria-hidden="true"><span class="spinner"></span> ⏳ Checking password…</div>
+  </div>
+
+  <!-- Panel (hidden until login) -->
+  <div id="panelScreen" style="display:none;" aria-hidden="true">
+    <h2>Super Admin Panel</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <button id="createNewBtn" class="btn-create">Create New User</button>
+      <div class="muted small">Tip: Rights are auto-generated from role. Use Edit to change role/password.</div>
+    </div>
+
+    <table id="usersTable" aria-live="polite">
+      <thead>
+        <tr><th>Username</th><th>Role</th><th>Rights</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Create / Edit form -->
+    <div id="createEditForm" role="form" aria-hidden="true">
+      <h3 id="formTitle">Create User</h3>
+      <input type="hidden" id="editUsername" />
+      <label class="small">Username</label>
+      <input id="username" type="text" placeholder="Username" />
+      <label class="small">Password</label>
+      <div style="position:relative;">
+        <input id="password" type="password" placeholder="Password" />
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--accent)" id="formToggle">👁</span>
+      </div>
+      <div id="pwStrength" class="pw-strength muted"></div>
+      <label class="small">Role</label>
+      <select id="role">
+        <option>Agent</option>
+        <option>Manager</option>
+        <option>Admin</option>
+      </select>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="saveBtn" class="btn-create">Save</button>
+        <button id="cancelBtn" style="background:#444;color:#fff">Cancel</button>
+      </div>
+      <p id="formMessage" class="muted"></p>
+    </div>
+
+    <div id="panelLoader" class="loader"><span class="spinner"></span> ⏳ Working…</div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==========================
+   CONFIG - replace with your deployed webapp URL
+   ========================== */
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxsafwnEo9sXUaHgkKVYhw0C5qVvfaFq1PRNB1Q-ig2BWDTFzTI9vrxjj4mtl-0biOW/exec";
+
+/* ====== small utilities ====== */
+function showLoginLoader(show){
+  const el=document.getElementById('loginLoader');
+  el.style.display = show ? 'block' : 'none';
+  el.setAttribute('aria-hidden', show ? 'false' : 'true');
+}
+function showPanelLoader(show, message="⏳ Working…"){
+  const el=document.getElementById('panelLoader');
+  el.innerHTML = message;
+  el.style.display = show ? 'block' : 'none';
+}
+
+function showToast(msg, type="info", ms=2500){
+  const t=document.getElementById('toast');
+  let icon="ℹ️", bg="var(--accent)", color="#000";
+
+  if(type==="success"){ icon="✅"; bg="#0f0"; color="#000"; }
+  else if(type==="error"){ icon="❌"; bg="#f33"; color="#fff"; }
+  else if(type==="warn"){ icon="⚠️"; bg="#ff0"; color="#000"; }
+  else if(type==="info"){ icon="ℹ️"; bg="#0ff"; color="#000"; }
+
+  t.innerHTML=`${icon} ${msg}`;
+  t.style.background=bg;
+  t.style.color=color;
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none', ms);
+}
+
+
+/* ====== state ====== */
+let editMode = false;
+
+/* ====== Default rights by role ====== */
+function getDefaultRights(role){
+  if(role==='Admin') return ["dashboard","crm-dashboard-v2","leads","buyers","sellers","properties","tasks","reports","map","settings"];
+  if(role==='Manager') return ["leads","buyers","sellers","properties","tasks","reports","map","settings"];
+  return ["leads","buyers","sellers","properties","tasks"]; // Agent
+}
+
+/* ====== helpers to avoid XSS when injecting into table ====== */
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeJs(s){ if(!s) return ''; return String(s).replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+/* ====== Password toggles ====== */
+function toggleLoginPassword(){
+  const e = document.getElementById('superAdminPassword'); e.type = e.type === 'password' ? 'text' : 'password';
+}
+function toggleFormPassword(){
+  const e = document.getElementById('password'); e.type = e.type === 'password' ? 'text' : 'password';
+}
+
+/* ====== Password strength helper ====== */
+function passwordStrength(pw){
+  if(!pw || pw.length < 6) return {score:0,label:'Too short'};
+  const tests = [
+    /[A-Z]/.test(pw),
+    /[a-z]/.test(pw),
+    /[0-9]/.test(pw),
+    /[^A-Za-z0-9]/.test(pw),
+    pw.length >= 10
+  ];
+  const score = tests.filter(Boolean).length;
+  if(score <= 2) return {score,label:'Weak'};
+  if(score === 3) return {score,label:'Medium'};
+  if(score >= 4) return {score,label:'Strong'};
+  return {score,label:'OK'};
+}
+
+/* ====== Robust rights parsing (string / csv / JSON / array) ====== */
+function parseRights(raw){
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw;
+  if(typeof raw === 'object' && raw !== null){
+    // some backend variants may return {0:'a',1:'b'} etc - carefully convert
+    try {
+      return Object.values(raw).map(String).map(s=>s.trim()).filter(Boolean);
+    } catch(e){ return []; }
+  }
+  if(typeof raw === 'string'){
+    const s = raw.trim();
+    if(!s) return [];
+    // JSON array?
+    if(s.startsWith('[') && s.endsWith(']')){
+      try {
+        const normalized = s.replace(/'/g,'"'); // tolerate single quotes
+        const arr = JSON.parse(normalized);
+        if(Array.isArray(arr)) return arr.map(String).map(x=>x.trim()).filter(Boolean);
+      } catch(e){
+        // fallback to CSV parsing
+      }
+    }
+    // comma separated?
+    if(s.includes(',')){
+      return s.split(',').map(x=>x.trim()).filter(Boolean);
+    }
+    // single word
+    return [s];
+  }
+  return [];
+}
+
+/* ====== Render table (robust parsing of rights) ====== */
+function renderTable(users){
+  const tbody = document.querySelector('#usersTable tbody');
+  tbody.innerHTML = '';
+  users.forEach(u=>{
+    const username = (u.Username || u.username || '').trim();
+    const role     = (u.Role     || u.role     || '').trim();
+    // support multiple header cases used earlier: DashboardRights, Rights, rights
+    const rightsRaw = (u.DashboardRights || u.Dashboardrights || u.rights || u.Rights || u.Dashboard || '') ;
+    console.log('Row:', username, 'rawRights:', rightsRaw);
+    const rightsArr = parseRights(rightsRaw);
+    const rightsText = rightsArr.length ? rightsArr.join(', ') : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(username)}</td>
+      <td>${escapeHtml(role)}</td>
+      <td class="small">${escapeHtml(rightsText)}</td>
+      <td>
+        <button class="btn-edit btn-inline" onclick="editUser('${escapeJs(username)}')">Edit</button>
+        <button class="btn-del btn-inline" onclick="deleteUser('${escapeJs(username)}')">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ====== Fetch helpers ====== */
+async function postToBackend(payload){
+  // always post JSON body
+  const res = await fetch(WEBAPP_URL, { method:'POST', body: JSON.stringify(payload) });
+  return await res.json();
+}
+
+/* ====== super admin login ====== */
+async function superAdminLogin(){
+  const pw = document.getElementById('superAdminPassword').value.trim();
+  document.getElementById('loginMessage').innerText = '';
+  if(!pw){ document.getElementById('loginMessage').innerText = 'Please enter password'; return; }
+
+  try {
+    showLoginLoader(true);
+    console.log('[SuperAdmin] Calling backend superAdminLogin...');
+    const data = await postToBackend({ action: 'superAdminLogin', password: pw });
+    showLoginLoader(false);
+    console.log('[SuperAdmin] login response:', data);
+    if(data && data.success){
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('panelScreen').style.display = 'block';
+      document.getElementById('loginScreen').setAttribute('aria-hidden','true');
+      document.getElementById('panelScreen').setAttribute('aria-hidden','false');
+      showToast('Login successful');
+      await loadUsers();
+    } else {
+      document.getElementById('loginMessage').innerText = (data && data.message) ? data.message : 'Login failed';
+    }
+  } catch (err){
+    showLoginLoader(false);
+    console.error('Login error', err);
+    document.getElementById('loginMessage').innerText = 'Network / server error';
+  }
+}
+
+/* ====== Load users (initial) ====== */
+async function loadUsers(){
+  try {
+    showPanelLoader(true);
+    console.log('[SuperAdmin] fetching all users...');
+    const data = await postToBackend({ action: 'getAllUsers' });
+    showPanelLoader(false);
+    console.log('[SuperAdmin] getAllUsers response:', data);
+    const users = data && data.users ? data.users : [];
+    console.log('Loaded users:', users.length, users.slice(0,5));
+    renderTable(users);
+    showToast('Users loaded');
+  } catch(err){
+    showPanelLoader(false);
+    console.error('loadUsers error', err);
+    showToast('Failed to load users');
+  }
+}
+
+/* ====== show create form (safe) ====== */
+function showCreateForm(){
+  editMode = false;
+  document.getElementById('formTitle').innerText = 'Create User';
+  document.getElementById('editUsername').value = '';
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('role').value = 'Agent';
+  document.getElementById('pwStrength').innerText = '';
+  document.getElementById('formMessage').innerText = '';
+  document.getElementById('createEditForm').style.display = 'block';
+  document.getElementById('createEditForm').setAttribute('aria-hidden','false');
+  window.scrollTo({ top: document.getElementById('createEditForm').offsetTop - 10, behavior: 'smooth' });
+}
+
+/* ====== Edit user ====== */
+async function editUser(username){
+  try {
+    showPanelLoader(true, "✏️ Loading user…");   // custom loader message
+    console.log('[SuperAdmin] getUser', username);
+    const data = await postToBackend({ action:'getUser', username });
+    showPanelLoader(false);
+    console.log('getUser response', data);
+
+    if(data && data.user){
+      editMode = true;
+      document.getElementById('formTitle').innerText = 'Edit User';
+      document.getElementById('editUsername').value = username;
+      document.getElementById('username').value = (data.user.Username || data.user.username || username);
+      document.getElementById('password').value = ''; // blank to keep old password
+      document.getElementById('role').value = (data.user.Role || data.user.role || 'Agent');
+      document.getElementById('pwStrength').innerText = '';
+      document.getElementById('formMessage').innerText = '';
+      document.getElementById('createEditForm').style.display = 'block';
+      document.getElementById('createEditForm').setAttribute('aria-hidden','false');
+      window.scrollTo({ top: document.getElementById('createEditForm').offsetTop - 10, behavior: 'smooth' });
+    } else {
+      showToast('❌ User not found', "error");
+    }
+  } catch(err){
+    showPanelLoader(false);
+    console.error('editUser error', err);
+    showToast('❌ Failed to load user', "error");
+  }
+}
+
+/* ====== Save user (create or update) ====== */
+async function saveUser(){
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const role     = document.getElementById('role').value;
+
+  document.getElementById('formMessage').innerText = '';
+
+  if(!username){ 
+    document.getElementById('formMessage').innerText='Username required'; 
+    return; 
+  }
+
+  if(!editMode){
+    const s = passwordStrength(password);
+    if(s.score < 3){
+      document.getElementById('formMessage').innerText = 
+        'Password too weak (need upper, lower, digit & special)'; 
+      return;
+    }
+  }
+
+  const rights = getDefaultRights(role);
+
+  const payload = {
+    action: editMode ? 'updateUser' : 'addUser',
+    username,
+    password,
+    role,
+    rights
+  };
+  if(editMode) payload.oldUsername = document.getElementById('editUsername').value;
+
+  try {
+    showPanelLoader(true, "💾 Saving user…");   // custom loader message
+    console.log('[SuperAdmin] saveUser payload', payload);
+    const data = await postToBackend(payload);
+    showPanelLoader(false);
+    console.log('saveUser response:', data);
+
+    if(data && data.success){
+      showToast("✅ User saved successfully", "success");
+      // reset form and refresh
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+      document.getElementById('pwStrength').innerText = '';
+      cancelForm();
+      await loadUsers();
+    } else {
+      document.getElementById('formMessage').innerText = data.message || 'Save failed';
+      showToast(data.message || "❌ Save failed", "error");
+    }
+  } catch(err){
+    showPanelLoader(false);
+    console.error('saveUser error', err);
+    showToast('❌ Save failed (network)', "error");
+  }
+}
+
+/* ====== Delete user ====== */
+async function deleteUser(username){
+  if(!confirm(`Delete user "${username}" ?`)) return;
+  try {
+    showPanelLoader(true, "🗑 Deleting user…");   // custom loader message
+    console.log('[SuperAdmin] deleteUser', username);
+    const data = await postToBackend({ action:'deleteUser', username });
+    showPanelLoader(false);
+    console.log('deleteUser response:', data);
+
+    if(data && data.success){
+      showToast("✅ User deleted", "success");
+      await loadUsers();
+    } else {
+      showToast(data.message || "❌ Delete failed", "error");
+    }
+  } catch(err){
+    showPanelLoader(false);
+    console.error('deleteUser error', err);
+    showToast('❌ Delete failed (network)', "error");
+  }
+}
+
+/* ====== Cancel form ====== */
+function cancelForm(){
+  editMode = false;
+  document.getElementById('createEditForm').style.display = 'none';
+  document.getElementById('createEditForm').setAttribute('aria-hidden','true');
+  document.getElementById('formMessage').innerText = '';
+}
+
+/* ====== DOM wiring after load ====== */
+document.addEventListener('DOMContentLoaded', function(){
+  // wire buttons
+  document.getElementById('loginBtn').addEventListener('click', superAdminLogin);
+  document.getElementById('loginToggle').addEventListener('click', toggleLoginPassword);
+  document.getElementById('createNewBtn').addEventListener('click', showCreateForm);
+  document.getElementById('formToggle').addEventListener('click', toggleFormPassword);
+  document.getElementById('cancelBtn').addEventListener('click', cancelForm);
+  document.getElementById('saveBtn').addEventListener('click', saveUser);
+
+  // password strength live update
+  const pwInput = document.getElementById('password');
+  pwInput.addEventListener('input', (e)=>{
+    const res = passwordStrength(e.target.value);
+    document.getElementById('pwStrength').innerText = `Password: ${res.label}`;
+  });
+
+  console.log('SuperAdmin panel loaded (frontend)');
+});
+</script>
+</body>
+</html>

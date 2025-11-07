@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gamified Dashboard with Drill-down Hover</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
+.card { background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:relative; }
+
+/* KPI styles */
+.kpi-icon { font-size:28px; }
+.kpi { font-size:24px; font-weight:bold; cursor:default; }
+.kpisub { font-size:14px; color:#666; }
+
+/* Progress bar */
+.gamify-progress .progress-wrapper { position:relative; height:16px; border-radius:12px; overflow:hidden; background:#e0e0e0; margin-top:10px; }
+.gamify-progress .progress-bar { height:100%; width:0; border-radius:12px; transition: width 1s ease, background 0.5s ease; background-size: 200% 100%; animation: gradientMove 3s linear infinite; }
+@keyframes gradientMove { 0% { background-position:0% 0; } 100% { background-position:100% 0; } }
+
+.progress-info { display:flex; align-items:center; gap:6px; margin-top:6px; font-size:14px; flex-wrap:wrap; }
+.progress-pill { padding:2px 8px; border-radius:12px; font-weight:bold; color:#fff; white-space:nowrap; }
+.completed-pill { background:#10b981; }
+.total-pill { background:#3b82f6; }
+.progress-text { color:#333; font-size:14px; }
+
+/* Milestone badges */
+.gamify-badges-container { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.gamify-badge { padding:8px 14px; border-radius:12px; color:#fff; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.2); cursor:default; position:relative; transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.5s ease; }
+.gamify-badge:hover { transform: scale(1.05); box-shadow:0 6px 18px rgba(0,0,0,0.35); }
+.milestone-1 { background:#cd7f32; } 
+.milestone-5 { background:#c0c0c0; } 
+.milestone-10 { background:#ffd700; } 
+.milestone-25 { background:#9a22f6; } 
+.milestone-50 { background:#00bfff; } 
+@keyframes pulseGlow { 0% { transform: scale(1); box-shadow:0 0 0 rgba(255,255,255,0); } 50% { transform: scale(1.15); box-shadow:0 0 20px rgba(255,255,255,0.8); } 100% { transform: scale(1); box-shadow:0 0 0 rgba(255,255,255,0); } }
+.gamify-badge.pulse { animation: pulseGlow 1s ease-in-out; }
+.gamify-badge[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position:absolute;
+  bottom:125%;
+  left:50%;
+  transform:translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color:#fff;
+  padding:6px 10px;
+  border-radius:8px;
+  white-space:nowrap;
+  font-size:12px;
+  z-index:10;
+}
+.gamify-badge[data-tooltip]:hover::before {
+  content:'';
+  position:absolute;
+  bottom:115%;
+  left:50%;
+  transform:translateX(-50%);
+  border-width:6px;
+  border-style:solid;
+  border-color: rgba(0,0,0,0.85) transparent transparent transparent;
+  z-index:10;
+}
+
+/* Task Streak Card */
+.task-streak-card { position: relative; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Chart container */
+.chart-card { padding:15px; margin-top:10px; }
+
+/* Drill-down task list */
+.task-list { background:#f9f9f9; border-radius:10px; padding:10px; margin-top:10px; max-height:200px; overflow-y:auto; font-size:14px; }
+.task-list div { padding:6px 10px; border-bottom:1px solid #ddd; border-radius:6px; margin-bottom:4px; transition: transform 0.2s, background 0.2s; position:relative; }
+.task-list div:last-child { border-bottom:none; }
+.task-done { color:#10b981; font-weight:bold; }
+.task-pending { color:#f97316; font-weight:bold; }
+.task-list div:hover { transform: scale(1.03); background: rgba(16,185,129,0.1); cursor:pointer; }
+.task-list div[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position:absolute;
+  left:105%;
+  top:50%;
+  transform:translateY(-50%);
+  background: rgba(0,0,0,0.85);
+  color:#fff;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  white-space: nowrap;
+  z-index:10;
+}
+.task-list div[data-tooltip]:hover::before {
+  content:'';
+  position:absolute;
+  left:100%;
+  top:50%;
+  transform:translateY(-50%);
+  border-width:6px;
+  border-style:solid;
+  border-color: transparent rgba(0,0,0,0.85) transparent transparent;
+  z-index:10;
+}
+</style>
+</head>
+<body>
+
+<div class="card task-streak-card">
+  <div class="kpi-icon">🏆</div>
+  <div class="kpi" id="kpi-streak">0</div>
+  <div class="kpisub">Task Streak</div>
+
+  <div class="gamify-progress" id="gamify-progress">
+    <div class="progress-wrapper">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-info">
+      <span class="progress-pill completed-pill" id="completed-pill">0</span>
+      <span>of</span>
+      <span class="progress-pill total-pill" id="total-pill">0</span>
+      <span class="progress-text">tasks completed</span>
+    </div>
+  </div>
+</div>
+
+<div class="card chart-card">
+  <canvas id="barChart" height="100"></canvas>
+</div>
+<div class="card chart-card">
+  <canvas id="pieChart" height="100"></canvas>
+</div>
+
+<div class="card">
+  <div class="gamify-badges-container" id="gamify-badges-container"></div>
+</div>
+
+<div class="card task-list" id="task-list-container">
+  <strong>Drill-down Tasks:</strong>
+</div>
+
+<script>
+// Sample live data
+let data = {
+  tasks: Array.from({length:16}, (_,i)=>({ID:i+1, Status:i<5?'done':'open', CompletedDate:'2025-09-12'}))
+};
+
+const streakEl = document.getElementById("kpi-streak");
+const progressBar = document.getElementById("progress-bar");
+const completedPill = document.getElementById("completed-pill");
+const totalPill = document.getElementById("total-pill");
+const gamifyContainer = document.getElementById("gamify-badges-container");
+const taskListContainer = document.getElementById("task-list-container");
+
+// Initialize Charts
+const barCtx = document.getElementById("barChart").getContext("2d");
+const pieCtx = document.getElementById("pieChart").getContext("2d");
+
+let barChart = new Chart(barCtx, {
+  type: 'bar',
+  data: { labels:['Completed','Pending'], datasets:[{label:'Tasks', data:[0,0], backgroundColor:['#10b981','#f97316']}] },
+  options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, precision:0}} }
+});
+
+let pieChart = new Chart(pieCtx, {
+  type:'pie',
+  data:{ labels:['Completed','Pending'], datasets:[{data:[0,0], backgroundColor:['#10b981','#f97316']}] },
+  options:{ responsive:true, plugins:{legend:{position:'bottom'}} }
+});
+
+function updateProgress() {
+  const completed = data.tasks.filter(t=>t.Status==='done').length;
+  const total = data.tasks.length;
+
+  streakEl.textContent = completed;
+  completedPill.textContent = completed;
+  totalPill.textContent = total;
+
+  const percentage = total ? (completed/total)*100 : 0;
+  if(percentage===0) progressBar.style.background='linear-gradient(90deg,#cccccc,#cccccc)';
+  else if(percentage<50) progressBar.style.background='linear-gradient(90deg,#f97316,#f59e0b)';
+  else if(percentage<100) progressBar.style.background='linear-gradient(90deg,#3b82f6,#6366f1)';
+  else progressBar.style.background='linear-gradient(90deg,#10b981,#22c55e)';
+
+  progressBar.style.width = percentage+'%';
+
+  // Update charts
+  const pending = total - completed;
+  barChart.data.datasets[0].data = [completed,pending];
+  barChart.update();
+
+  pieChart.data.datasets[0].data = [completed,pending];
+  pieChart.update();
+}
+
+function renderMilestoneBadges() {
+  const completed = data.tasks.filter(t=>t.Status==='done').length;
+  const milestoneSteps = [1,5,10,25,50];
+  const existingMilestones = Array.from(gamifyContainer.children).map(b=>parseInt(b.dataset.milestone));
+
+  milestoneSteps.forEach(ms=>{
+    if(completed>=ms && !existingMilestones.includes(ms)){
+      const badge = document.createElement("div");
+      badge.className = "gamify-badge milestone-"+ms+" pulse";
+      badge.dataset.milestone = ms;
+      badge.textContent = `🏅 ${ms} tasks completed!`;
+      badge.dataset.tooltip = `You've completed ${ms} tasks! Keep the streak going!`;
+      gamifyContainer.appendChild(badge);
+      setTimeout(()=>badge.classList.remove('pulse'),1200);
+    }
+  });
+}
+
+// Drill-down functionality with tooltips
+function showTasks(filterStatus) {
+  taskListContainer.innerHTML = '<strong>Drill-down Tasks:</strong>';
+  let filtered = filterStatus==='all'?data.tasks:data.tasks.filter(t=>t.Status===filterStatus);
+  filtered.forEach(t=>{
+    const div = document.createElement('div');
+    div.textContent = `Task #${t.ID} - ${t.Status==='done'?'Completed':'Pending'}`;
+    div.className = t.Status==='done'?'task-done':'task-pending';
+    div.dataset.tooltip = `ID: ${t.ID}, Status: ${t.Status}, Completed: ${t.CompletedDate || 'N/A'}`;
+    taskListContainer.appendChild(div);
+  });
+}
+
+// Chart click events
+barChart.canvas.onclick = (e)=>{
+  const points = barChart.getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+  if(points.length){ const label = barChart.data.labels[points[0].index]; showTasks(label==='Completed'?'done':'open'); }
+};
+pieChart.canvas.onclick = (e)=>{
+  const points = pieChart.getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+  if(points.length){ const label = pieChart.data.labels[points[0].index]; showTasks(label==='Completed'?'done':'open'); }
+};
+
+// Simulate live task completion
+function simulateTasks() {
+  const openTasks = data.tasks.filter(t=>t.Status!=='done');
+  if(openTasks.length>0) openTasks[Math.floor(Math.random()*openTasks.length)].Status='done';
+  updateProgress();
+  renderMilestoneBadges();
+}
+
+// Initial render
+updateProgress();
+renderMilestoneBadges();
+showTasks('all');
+setInterval(simulateTasks,3000);
+</script>
+
+</body>
+</html>
